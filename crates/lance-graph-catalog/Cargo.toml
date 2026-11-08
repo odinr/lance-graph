@@ -14,7 +14,7 @@ categories = ["database", "data-structures", "science"]
 arrow-schema = "58.4"
 async-trait = "0.1"
 datafusion = { version = "54.1", default-features = false }
-lance-namespace = "13.0.0"
+lance-namespace = "14.0.2"
 reqwest = { version = "0.12", features = ["json"], optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
