@@ -10,7 +10,7 @@ use crate::ast::*;
 use crate::error::{GraphError, Result};
 use nom::{
     branch::alt,
-    bytes::complete::{tag, tag_no_case, take_while1},
+    bytes::complete::{tag, tag_no_case, take_while, take_while1},
     character::complete::{char, digit0, digit1, multispace0, multispace1, one_of},
     combinator::{map, map_res, opt, peek, recognize},
     multi::{many0, separated_list0, separated_list1},
@@ -928,14 +928,14 @@ fn string_literal(input: &str) -> IResult<&str, String> {
 
 fn double_quoted_string(input: &str) -> IResult<&str, String> {
     let (input, _) = char('"')(input)?;
-    let (input, content) = take_while1(|c| c != '"')(input)?;
+    let (input, content) = take_while(|c| c != '"')(input)?;
     let (input, _) = char('"')(input)?;
     Ok((input, content.to_string()))
 }
 
 fn single_quoted_string(input: &str) -> IResult<&str, String> {
     let (input, _) = char('\'')(input)?;
-    let (input, content) = take_while1(|c| c != '\'')(input)?;
+    let (input, content) = take_while(|c| c != '\'')(input)?;
     let (input, _) = char('\'')(input)?;
     Ok((input, content.to_string()))
 }
@@ -1529,6 +1529,27 @@ mod tests {
                 assert_eq!(substring, "test");
             }
             _ => panic!("Expected CONTAINS expression"),
+        }
+    }
+
+    #[test]
+    fn test_parse_empty_string_literals() {
+        for query in [
+            "MATCH (n:Person) WHERE n.name <> '' AND n.age > 1 RETURN n.name",
+            "MATCH (n:Person) WHERE n.name = \"\" RETURN n.name",
+        ] {
+            let parsed = parse_cypher_query(query).expect(query);
+            let mut expr = &parsed.where_clause.unwrap().expression;
+            if let BooleanExpression::And(left, _) = expr {
+                expr = left;
+            }
+            match expr {
+                BooleanExpression::Comparison {
+                    right: ValueExpression::Literal(PropertyValue::String(value)),
+                    ..
+                } => assert_eq!(value, ""),
+                other => panic!("Expected empty string comparison, got {other:?}"),
+            }
         }
     }
 
